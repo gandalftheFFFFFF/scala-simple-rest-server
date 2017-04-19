@@ -19,18 +19,12 @@ import spray.json._
 import slick.driver.SQLiteDriver.api._
 import org.sqlite.JDBC
 
-  final case class JsonPerson(id: Int, name: String, age: Int)
-  final case class JsonPersonList(persons: List[Person])
-  class Person(tag: Tag) extends Table[(Int, String, Int)](tag, "PERSON") {
-    def id = column[Int]("id")
-    def name = column[String]("name")
-    def age = column[Int]("age")
-    def * = (id, name, age)
-  }
+import PersonDAO._
 
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
+  import PersonDAO._
   implicit val healthFormat = jsonFormat2(Health)
-  implicit val personFormat = jsonFormat2(JsonPerson)
+  implicit val personFormat = jsonFormat3(JsonPerson)
   implicit val personLisFormat = jsonFormat1(JsonPersonList)
 }
 
@@ -44,18 +38,6 @@ object Main extends App with JsonSupport {
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(20.seconds)
   
-  // Slick
-  val db = Database.forURL("jdbc:sqlite:./person.db")
-
-  val persons: TableQuery[Person] = TableQuery[Person]
-
-  /* db.run(persons.result) returns a Success(..) containing a Vector(..) of
-   * Tuple3 objects:
-   * Success(Vector((1,niels,28), (2,laura,29) ... ))
-   */
-
-  // slick end
-
   val requestHandler = system.actorOf(RequestHandler.props(), "requesthandler")
   
   val route: Route = {
@@ -71,7 +53,10 @@ object Main extends App with JsonSupport {
         */
        onSuccess(db.run(persons.result)) {
          case seq: Seq[(Int, String, Int)] =>
-           complete(JsonPersonList(seq))
+           complete(JsonPersonList(seq.map {
+             tuple => 
+               JsonPerson(tuple._1, tuple._2, tuple._3)
+           }))
          case _ =>
            complete(StatusCodes.InternalServerError)
        }
