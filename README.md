@@ -6,13 +6,7 @@ Use `curl` to access the 'api':
 
 ```bash
 $ curl -s -X GET localhost:8080/health
-{"status":"Healthy","description":"Initialized"}
-
-$ curl -s -H "Content-Type: application/json" -X POST -d '{"status": "Super healthly", "description": "This is the best server ever"}' localhost:8080/health
-Posted health as Super healthly!
-
-$ curl -s -X GET localhost:8080/health
-{"status":"Super healthly","description":"This is the best server ever"}
+{"persons":[{"id":1,"name":"niels","age":28},{"id":2,"name":"laura","age":29},{"id":3,"name":"allan","age":68},{"id":4,"name":"merete","age":67},{"id":5,"name":"asser","age":34},{"id":6,"name":"sofie","age":31}]}
 ```
 
 
