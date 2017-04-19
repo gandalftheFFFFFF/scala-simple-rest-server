@@ -15,8 +15,23 @@ import scala.io.StdIn
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._
 
+// Slick
+import slick.driver.SQLiteDriver.api._
+import org.sqlite.JDBC
+
+  final case class JsonPerson(id: Int, name: String, age: Int)
+  final case class JsonPersonList(persons: List[Person])
+  class Person(tag: Tag) extends Table[(Int, String, Int)](tag, "PERSON") {
+    def id = column[Int]("id")
+    def name = column[String]("name")
+    def age = column[Int]("age")
+    def * = (id, name, age)
+  }
+
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val healthFormat = jsonFormat2(Health)
+  implicit val personFormat = jsonFormat2(JsonPerson)
+  implicit val personLisFormat = jsonFormat1(JsonPersonList)
 }
 
 object Main extends App with JsonSupport {
@@ -28,18 +43,38 @@ object Main extends App with JsonSupport {
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(20.seconds)
+  
+  // Slick
+  val db = Database.forURL("jdbc:sqlite:./person.db")
+
+  val persons: TableQuery[Person] = TableQuery[Person]
+
+  /* db.run(persons.result) returns a Success(..) containing a Vector(..) of
+   * Tuple3 objects:
+   * Success(Vector((1,niels,28), (2,laura,29) ... ))
+   */
+
+  // slick end
 
   val requestHandler = system.actorOf(RequestHandler.props(), "requesthandler")
   
   val route: Route = {
     path("health") {
       get {
-        onSuccess(requestHandler ? GetHealthRequest) {
+        /*
+         onSuccess(requestHandler ? GetHealthRequest) {
           case response: HealthResponse =>
             complete(response.health)
           case _ =>
             complete(StatusCodes.InternalServerError)
         }
+        */
+       onSuccess(db.run(persons.result)) {
+         case seq: Seq[(Int, String, Int)] =>
+           complete(JsonPersonList(seq))
+         case _ =>
+           complete(StatusCodes.InternalServerError)
+       }
       } ~
       post {
         entity(as[Health]) { statusReport =>
