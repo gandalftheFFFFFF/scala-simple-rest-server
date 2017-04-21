@@ -22,6 +22,7 @@ import org.sqlite.JDBC
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val healthFormat = jsonFormat2(Health)
   implicit val personFormat = jsonFormat3(Person)
+  implicit val partialPersonFormat = jsonFormat2(PartialPerson)
   implicit val personLisFormat = jsonFormat1(PersonList)
 }
 
@@ -47,7 +48,7 @@ object Main extends App with JsonSupport {
            complete(StatusCodes.InternalServerError)
        }
       } ~ 
-      path("person"/IntNumber) { id =>
+      path("persons"/IntNumber) { id =>
         onSuccess(PersonsDAO.singlePerson(id)) {
           case Some(person) => complete(person)
           case None => complete("No such person!")
@@ -55,12 +56,22 @@ object Main extends App with JsonSupport {
       }
     } ~
     post {
-      entity(as[Health]) { statusReport =>
-        onSuccess(requestHandler ? SetStatusRequest(statusReport)) {
-          case response: HealthResponse =>
-            complete(StatusCodes.OK, s"Posted health as ${response.health.status}!")
-          case _ =>
-            complete(StatusCodes.InternalServerError)
+      path("persons") {
+        entity(as[PartialPerson]) { person =>
+          onSuccess(PersonsDAO.addPerson(person.name, person.age)) {
+            case person: Person =>
+              complete(person)
+            case _ =>
+              complete(StatusCodes.InternalServerError)
+          }
+        }
+      }
+    } ~
+    delete {
+      path("persons"/IntNumber) { id =>
+        onSuccess(PersonsDAO.deletePerson(id)) {
+          case 1 => complete(s"Deleted person with id $id")
+          case 0 => complete(s"No such person with id $id")
         }
       }
     }
