@@ -1,27 +1,32 @@
 package dk.nscp.rest_server
 
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
 // Slick
 import slick.driver.SQLiteDriver.api._
 import org.sqlite.JDBC
 
-object PersonDAO {
+case class Person(id: Int, name: String, age: Int)
+case class PersonList(persons: Seq[Person])
 
-  final case class JsonPerson(id: Int, name: String, age: Int) 
+case class Persons(tag: Tag) extends Table[Person](tag, "PERSONS") {
+  def id = column[Int]("ID")
+  def name = column[String]("NAME")
+  def age = column[Int]("AGE")
+  def * = (id, name, age) <> (Person.tupled, Person.unapply)
+}
 
-  final case class JsonPersonList(persons: Seq[JsonPerson]) 
+object PersonsDAO extends TableQuery(new Persons(_)) {
 
-  class Person(tag: Tag) extends Table[(Int, String, Int)](tag, "PERSON") {
-    def id = column[Int]("id")
-    def name = column[String]("name")
-    def age = column[Int]("age")
-    def * = (id, name, age)
+val db = Database.forURL("jdbc:sqlite:./person.db")
+
+  def allPersons: Future[Seq[Person]] = {
+    db.run(this.result)
   }
 
-
-  val db = Database.forURL("jdbc:sqlite:./person.db")
-
-  val persons: TableQuery[Person] = TableQuery[Person]
-
-  def allPersons = db.run(persons.result)
+  def singlePerson(id: Int): Future[Option[Person]] = {
+    db.run(this.filter(_.id === id).result.headOption)
+  }
 }
 

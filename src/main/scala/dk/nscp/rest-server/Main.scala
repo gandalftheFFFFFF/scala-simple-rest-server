@@ -19,13 +19,10 @@ import spray.json._
 import slick.driver.SQLiteDriver.api._
 import org.sqlite.JDBC
 
-import PersonDAO._
-
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-  import PersonDAO._
   implicit val healthFormat = jsonFormat2(Health)
-  implicit val personFormat = jsonFormat3(JsonPerson)
-  implicit val personLisFormat = jsonFormat1(JsonPersonList)
+  implicit val personFormat = jsonFormat3(Person)
+  implicit val personLisFormat = jsonFormat1(PersonList)
 }
 
 object Main extends App with JsonSupport {
@@ -41,34 +38,29 @@ object Main extends App with JsonSupport {
   val requestHandler = system.actorOf(RequestHandler.props(), "requesthandler")
   
   val route: Route = {
-    path("health") {
-      get {
-        /*
-         onSuccess(requestHandler ? GetHealthRequest) {
-          case response: HealthResponse =>
-            complete(response.health)
-          case _ =>
-            complete(StatusCodes.InternalServerError)
-        }
-        */
-       onSuccess(db.run(persons.result)) {
-         case seq: Seq[(Int, String, Int)] =>
-           complete(JsonPersonList(seq.map {
-             tuple => 
-               JsonPerson(tuple._1, tuple._2, tuple._3)
-           }))
+    get {
+      path("persons") {
+       onSuccess(PersonsDAO.allPersons) {
+         case persons: Seq[Person] =>
+           complete(PersonList(persons))
          case _ =>
            complete(StatusCodes.InternalServerError)
        }
-      } ~
-      post {
-        entity(as[Health]) { statusReport =>
-          onSuccess(requestHandler ? SetStatusRequest(statusReport)) {
-            case response: HealthResponse =>
-              complete(StatusCodes.OK, s"Posted health as ${response.health.status}!")
-            case _ =>
-              complete(StatusCodes.InternalServerError)
-          }
+      } ~ 
+      path("person"/IntNumber) { id =>
+        onSuccess(PersonsDAO.singlePerson(id)) {
+          case Some(person) => complete(person)
+          case None => complete("No such person!")
+        }
+      }
+    } ~
+    post {
+      entity(as[Health]) { statusReport =>
+        onSuccess(requestHandler ? SetStatusRequest(statusReport)) {
+          case response: HealthResponse =>
+            complete(StatusCodes.OK, s"Posted health as ${response.health.status}!")
+          case _ =>
+            complete(StatusCodes.InternalServerError)
         }
       }
     }
