@@ -17,6 +17,9 @@ $ docker-compose up -d
 $ sbt run
 ```
 
+Database connection details are found in `src/main/resources/application.conf`. When using this example they should
+match the values in `docker-compose.yml`.
+
 Use `curl` to access the 'api'. It consist of four simple actions:
 
 `GET /persons` -- get all persons in the database
