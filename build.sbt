@@ -1,15 +1,14 @@
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.10"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor" % "2.4.17",
-  "com.typesafe.akka" %% "akka-stream" % "2.4.17",
-  "com.typesafe.akka" %% "akka-http" % "10.0.5",
-  "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.5",
+  "com.typesafe.akka" %% "akka-http" % "10.1.11",
+  "com.typesafe.akka" %% "akka-stream" % "2.5.26",
+  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.11",
 
-  "com.typesafe.slick" %% "slick" % "3.2.0",
+  "io.getquill" %% "quill-async-postgres" % "3.5.0",
 
-  "org.xerial" % "sqlite-jdbc" % "3.16.1"
+  "org.xerial" % "sqlite-jdbc" % "3.27.2"
 
 
 )

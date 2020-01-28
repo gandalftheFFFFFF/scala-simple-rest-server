@@ -1,51 +1,48 @@
 package dk.nscp.rest_server
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import io.getquill._
 
-// Slick
-import slick.driver.SQLiteDriver.api._
-import org.sqlite.JDBC
+import scala.concurrent.Future
+
 
 case class Person(id: Int, name: String, age: Int)
 case class PartialPerson(name: String, age: Int)
 case class PersonList(persons: Seq[Person])
+case class Error(data: String, message: String)
 
-case class Persons(tag: Tag) extends Table[Person](tag, "PERSONS") {
-  def id = column[Int]("ID", O.PrimaryKey, O.AutoInc)
-  def name = column[String]("NAME")
-  def age = column[Int]("AGE")
-  def * = (id, name, age) <> (Person.tupled, Person.unapply)
-}
+object PersonsDAO {
 
-object PersonsDAO extends TableQuery(new Persons(_)) {
+  implicit val ec = scala.concurrent.ExecutionContext.global
 
-  /* Alternatively create a `val persons = TableQuery[Persons]` instead
-   * of using `this` */
+  val ctx = new PostgresAsyncContext(SnakeCase, "ctx")
+  import ctx._
 
-  val db = Database.forURL("jdbc:sqlite:./person.db")
+  /* Create a mapping between column names in postgres and the Person case class */
+  val person = quote {
+    querySchema[Person](
+      "person",
+      _.id -> "person_id",
+      _.age -> "birth_year",
+    )
+  }
 
   /* Query for all people in the db */
   def allPersons: Future[Seq[Person]] = {
-    db.run(this.result)
+    ctx.run(person)
   }
 
   /* Query for a single person */
   def singlePerson(id: Int): Future[Option[Person]] = {
-    db.run(this.filter(_.id === id).result.headOption)
+    ctx.run(person.filter(_.id == lift(id))).map(_.headOption)
   }
 
-  /* Adding new person to DB. We need to get the auto incrementing id back
-   * with this fancy trick:
-   * http://stackoverflow.com/questions/31443505/slick-3-0-insert-and-then-get-auto-increment-value/31448129#31448129
-   */
-  def addPerson(name: String, age: Int): Future[Person] = { 
-    db.run(this returning this.map(_.id) into ((person, id) => person.copy(id = id)) += Person(0, name, age))
+  def addPerson(name: String, age: Int): Future[Person] = {
+    ctx.run(person.insert(_.name -> lift(name), _.age -> lift(age)).returning(p => p))
   }
 
   /* Delete person by id */
-  def deletePerson(id: Int) = {
-    db.run(this.filter(_.id === id).delete)
+  def deletePerson(id: Int): Future[Int] = {
+    ctx.run(person.filter(_.id == lift(id)).delete).map(_ => 0) // This feels a little awkward :(
   }
 }
 
