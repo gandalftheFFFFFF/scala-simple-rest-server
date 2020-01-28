@@ -75,3 +75,12 @@ $ curl -w "\n" -X GET localhost:8080/persons
 ```
 
 
+## Thoughts on `DELETE`
+
+When I switched from Slick to Quill, I was no longer able to differentiate between a "successful" delete
+(where the resource existed) and an "unsuccessful" one (where the resource did not exist).
+
+This post on stackoverflow suggest that it's fine to return 200 or 204 when requesting to delete a resource that does
+not exist: https://stackoverflow.com/questions/6439416/deleting-a-resource-using-http-delete
+
+
