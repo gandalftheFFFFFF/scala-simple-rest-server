@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:10-alpine
+    environment:
+      POSGRES_PASSWORD: password
+      POSTGRES_USER: username
+      POSTGRES_DB: database
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
