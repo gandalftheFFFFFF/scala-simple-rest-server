@@ -29,23 +29,21 @@ object Main extends App with JsonSupport {
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(20.seconds)
-  
+
   val route: Route = {
     concat(
       get {
-        concat (
-          path("persons") {
-           onSuccess(PersonsDAO.allPersons) {
-           case persons: Seq[Person] =>
-             complete(PersonList(persons))
-           case _ =>
-             complete(StatusCodes.InternalServerError)
-           }
-          },
-        path("persons"/IntNumber) { id =>
+        concat(path("persons") {
+          onSuccess(PersonsDAO.allPersons) {
+            case persons: Seq[Person] =>
+              complete(PersonList(persons))
+            case _ =>
+              complete(StatusCodes.InternalServerError)
+          }
+        }, path("persons" / IntNumber) { id =>
           onSuccess(PersonsDAO.singlePerson(id)) {
             case Some(person) => complete(person)
-            case None => complete("{\"message\": \"No such person!\"}")
+            case None         => complete("{\"message\": \"No such person!\"}")
           }
         })
       },
@@ -62,7 +60,7 @@ object Main extends App with JsonSupport {
         }
       },
       delete {
-        path("persons"/IntNumber) { id =>
+        path("persons" / IntNumber) { id =>
           onSuccess(PersonsDAO.deletePerson(id)) {
             case 0 => complete(s"""{"message": "Deleted person with id $id"}""")
             case 1 => complete(s"""{"message": "No such person with id $id"}""")
@@ -79,4 +77,3 @@ object Main extends App with JsonSupport {
   bindingFuture.flatMap(_.unbind())
   system.terminate()
 }
-

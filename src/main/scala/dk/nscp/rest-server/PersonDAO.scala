@@ -4,7 +4,6 @@ import io.getquill._
 
 import scala.concurrent.Future
 
-
 case class Person(id: Int, name: String, age: Int)
 case class PartialPerson(name: String, age: Int)
 case class PersonList(persons: Seq[Person])
@@ -19,11 +18,7 @@ object PersonsDAO {
 
   /* Create a mapping between column names in postgres and the Person case class */
   val person = quote {
-    querySchema[Person](
-      "person",
-      _.id -> "person_id",
-      _.age -> "birth_year",
-    )
+    querySchema[Person]("person", _.id -> "person_id", _.age -> "birth_year")
   }
 
   /* Query for all people in the db */
@@ -37,12 +32,15 @@ object PersonsDAO {
   }
 
   def addPerson(name: String, age: Int): Future[Person] = {
-    ctx.run(person.insert(_.name -> lift(name), _.age -> lift(age)).returning(p => p))
+    ctx.run(
+      person.insert(_.name -> lift(name), _.age -> lift(age)).returning(p => p)
+    )
   }
 
   /* Delete person by id */
   def deletePerson(id: Int): Future[Int] = {
-    ctx.run(person.filter(_.id == lift(id)).delete).map(_ => 0) // This feels a little awkward :(
+    ctx
+      .run(person.filter(_.id == lift(id)).delete)
+      .map(_ => 0) // This feels a little awkward :(
   }
 }
-
